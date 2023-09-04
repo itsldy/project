@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JSON File Upload</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <input type="file" id="jsonFileInput">
+    <button onclick="uploadJSON()">Upload JSON</button>
+    <div style="height:400px;width:50%;overflow:auto;">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>FID</th>
+                    <th>OBJECTID</th>
+                    <th>UserID</th>
+                    <th>事件编</th>
+                    <th>具体类</th>
+                    <th>所在位</th>
+                    <th>所在县</th>
+                    <th>所在市</th>
+                    <th>所在省</th>
+                    <th>河湖名</th>
+                    <th>问题发</th>
+                    <th>问题描</th>
+                    <th>问题整</th>
+                    <th>问题类</th>
+                    <!-- 添加其他属性列... -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 表格内容将在 JavaScript 中动态生成 -->
+            </tbody>
+        </table>
+    </div>
+    <div id='map' style='width: 100%; height: 400px;'></div>
+    <script>
+        async function uploadJSON() {
+            const fileInput = document.getElementById('jsonFileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('jsonFile', file);
+
+            try {
+                const response = await fetch('http://127.0.0.1:3000/upload', {
+                    method: 'POST',
+                    body: formData,
+                    mode: "cors"
+                });
+                const data = await response.json();
+                alert(data.message);
+                fetchData(); // 上传完成后立即获取数据并显示在表格中
+            } catch (error) {
+                console.error('Error uploading JSON:', error);
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://127.0.0.1:3000/fetch-data');
+                const data = await response.json();
+                populateTable(data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function populateTable(data) {
+            const tableBody = document.querySelector('#dataTable tbody');
+            tableBody.innerHTML = '';
+
+            // 初始化 Leaflet 地图
+            const map = L.map('map').setView([45.7569, 126.6424], 10); // 初始中心点和缩放级别
+
+            // // 使用 OpenStreetMap 作为地图图层
+            // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            //     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            // }).addTo(map);
+            // 加载天地图作为地图图层
+            L.tileLayer(`http://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=eb0c839118d488e74441b51663b39463`).addTo(map);
+
+            data.forEach(point => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${point.properties.FID}</td>
+                    <td>${point.properties.OBJECTID}</td>
+                    <td>${point.properties.UserID}</td>
+                    <td>${point.properties.事件编}</td>
+                    <td>${point.properties.具体类}</td>
+                    <td>${point.properties.所在位}</td>
+                    <td>${point.properties.所在县}</td>
+                    <td>${point.properties.所在市}</td>
+                    <td>${point.properties.所在省}</td>
+                    <td>${point.properties.河湖名}</td>
+                    <td>${point.properties.问题发}</td>
+                    <td>${point.properties.问题描}</td>
+                    <td>${point.properties.问题整}</td>
+                    <td>${point.properties.问题类}</td>
+                `;
+                // row.innerHTML = `
+                //     <td>${point.properties.FID}</td>
+                //     <td>${point.properties.OBJECTID}</td>
+                //     <td>${point.properties.UserID}</td>
+                // `;
+                tableBody.appendChild(row);
+
+                // 在 Leaflet 地图上展示点
+                const coordinates = point.geometry.coordinates;
+                L.marker(coordinates.reverse()).addTo(map);
+            });
+        }
+        // 在页面加载时获取数据并显示在表格中
+        fetchData();
+    </script>
+</body>
+
+</html>
