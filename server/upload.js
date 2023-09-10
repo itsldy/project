@@ -1,11 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 // const fs = require('fs');
-const FeatureCollectionModel = require("./pointmodel");//mongo模型
+const PointCollectionModel = require("./pointmodel");//mongo模型
 const cors = require('cors');//跨域
 const multer = require('multer'); // 用于处理文件上传
-// const bodyParser = require('body-parser'); // 用于解析请求体
-
 const app = express();
 const port = 3000;
 
@@ -19,48 +17,50 @@ mongoose.connect('mongodb://127.0.0.1/newgeojson_db', { useNewUrlParser: true, u
   });
 
 app.use(cors({
-  origin: 'http://127.0.0.1:5500' // 允许来自此域的请求
+  origin: 'http://localhost:5173' // 允许来自此域的请求
 }));
 
 // 设置文件上传存储配置
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+app.post('/upload/:fieldName', (req, res) => {
+  const fieldName = req.params.fieldName; // 获取动态字段名
+  // console.log(fieldName);
+  upload.single(fieldName)(req, res, (err) => {
+    if (err) {
+      console.error('Error uploading file:', err);
+      res.status(500).json({ error: 'An error occurred.' });
+    }
 
-// 使用 body-parser 解析请求体
-// app.use(bodyParser.urlencoded({ extended: true }));
-// app.use(bodyParser.json());
-
-app.post('/upload', upload.single('jsonFile'), async (req, res) => {
-  try {
-    // 解析上传的 JSON 数据
+    // 继续处理上传的文件
     const geojsonData = JSON.parse(req.file.buffer.toString());
-    const featureCollection = new FeatureCollectionModel(geojsonData);
-    await featureCollection.save()
+    console.log(geojsonData[0]);
+    // 使用 Promise.all 来等待所有保存操作完成后再发送响应
+    Promise.all(geojsonData.map(element => {
+      const featureCollection = new PointCollectionModel(element);
+      return featureCollection.save();
+    }))
       .then(savedData => {
-        console.log('Data saved:', savedData);
+        // console.log('Data saved:', savedData);
+        res.json({ message: 'User data uploaded and saved.' });
       })
       .catch(error => {
         console.error('Error saving data:', error);
+        res.status(500).json({ error: 'An error occurred.' });
       });
-    mongoose.disconnect();
-    res.json({ message: 'User data uploaded and saved.' });
-  } catch (error) {
-    console.error('Error uploading and saving JSON:', error);
-    res.status(500).json({ error: 'An error occurred.' });
-  }
+  });
 })
 
 app.get('/fetch-data', async (req, res) => {
   try {
-      const featureCollection = await FeatureCollectionModel.find();
-      res.json(featureCollection[0].features);
+    const featureCollection = await PointCollectionModel.find();
+    res.json(featureCollection[0].features);
   } catch (error) {
-      console.error('Error fetching data:', error);
-      res.status(500).json({ error: 'An error occurred.' });
+    console.error('Error fetching data:', error);
+    res.status(500).json({ error: 'An error occurred.' });
   }
 });
-  
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-

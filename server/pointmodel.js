@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // 定义地理空间模型
-const PointSchema = new mongoose.Schema({
+const geometrySchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ['Point'],
@@ -19,8 +19,7 @@ const FeatureSchema = new mongoose.Schema({
         enum: ['Feature'],
         required: true
     },
-    id: Number,
-    geometry: PointSchema,
+    geometry: geometrySchema,
     properties: {
         FID: Number,
         OBJECTID: Number,
@@ -40,26 +39,7 @@ const FeatureSchema = new mongoose.Schema({
     }
 });
 
-const FeatureCollectionSchema = new mongoose.Schema({
-    type: {
-        type: String,
-        enum: ['FeatureCollection'],
-        required: true
-    },
-    crs: {
-        type: {
-            type: String,
-            enum: ['name'],
-            required: true
-        },
-        properties: {
-            name: String
-        }
-    },
-    features: [FeatureSchema]
-});
-
 // 创建模型
-const FeatureCollectionModel = mongoose.model('FeatureCollection', FeatureCollectionSchema);
+const PointCollectionModel = mongoose.model('PointCollection', FeatureSchema);
 
-module.exports = FeatureCollectionModel;
+module.exports = PointCollectionModel;
