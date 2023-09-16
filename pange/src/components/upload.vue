@@ -6,7 +6,7 @@
                 Select File
             </a-button>
         </a-upload>
-        <a-button type="primary" :disabled="fileList.length === 0" :loading="uploading" @click="handleUpload">
+        <a-button type="primary" :disabled="fileList.length === 0" :loading="uploading" @click="handleUpload" >
             {{ uploading ? 'Uploading' : 'Start Upload' }}
         </a-button>
     </div>
@@ -16,14 +16,16 @@
 import axios from 'axios';
 import { UploadOutlined } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref,defineEmits } from 'vue';
 export default defineComponent({
     components: {
         UploadOutlined,
     },
-    setup() {
+    emits:['getJson'],
+    setup(props, { emit }) {
         const fileList = ref([]);
         const uploading = ref(false);
+        const jsonData = ref();
         const handleRemove = file => {
             const index = fileList.value.indexOf(file);
             const newFileList = fileList.value.slice();
@@ -32,8 +34,24 @@ export default defineComponent({
         };
         const beforeUpload = file => {
             fileList.value = [...fileList.value, file];
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const fileContent = event.target.result;  // 文件内容在这里
+                try {
+                    jsonData.value = JSON.parse(fileContent);
+                    // 在这里可以对JSON数据进行处理  
+                    // console.log(jsonData.value);
+                } catch (error) {
+                    // 处理解析JSON时的错误  
+                    console.error("无法解析JSON文件:", error);
+                }
+            };
+            reader.readAsText(file);
             return false;
         };
+        const submitData = () => {
+            emit("getJson",jsonData.value);
+        }
         const handleUpload = async () => {
             const formData = new FormData();
             const fieldName = 'geojsonfile';
@@ -47,6 +65,8 @@ export default defineComponent({
                 await axios.post(`http://127.0.0.1:3000/upload/${fieldName}`, formData);
                 fileList.value = [];
                 uploading.value = false;
+                // emit("getJson",jsonData.value);
+                submitData();
                 message.success('Upload successfully.');
             } catch (error) {
                 uploading.value = false;
@@ -54,6 +74,7 @@ export default defineComponent({
                 console.error('Error uploading JSON:', error);
             }
         };
+
         return {
             fileList,
             uploading,
