@@ -24,6 +24,9 @@ app.use(cors({
 // 设置文件上传存储配置
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+let PointCollectionModel;
+
 app.post('/upload/:fieldName', (req, res) => {
   const fieldName = req.params.fieldName; // 获取动态字段名
   // console.log(fieldName);
@@ -35,9 +38,9 @@ app.post('/upload/:fieldName', (req, res) => {
 
     // 继续处理上传的文件
     const geojsonData = JSON.parse(req.file.buffer.toString());
-    console.log(geojsonData[0]);
+    // console.log(geojsonData[0]);
     const generateSchemaSchema = generateSchemaFromGeoJSON(geojsonData);
-    const PointCollectionModel = getPointCollectionModel(generateSchemaSchema);
+    PointCollectionModel = getPointCollectionModel(generateSchemaSchema);
     // 使用 Promise.all 来等待所有保存操作完成后再发送响应
     Promise.all(geojsonData.map(element => {
       const featureCollection = new PointCollectionModel(element);
@@ -54,15 +57,19 @@ app.post('/upload/:fieldName', (req, res) => {
   });
 })
 
-// app.get('/fetch-data', async (req, res) => {
-//   try {
-//     const featureCollection = await PointCollectionModel.find();
-//     res.json(featureCollection[0].features);
-//   } catch (error) {
-//     console.error('Error fetching data:', error);
-//     res.status(500).json({ error: 'An error occurred.' });
-//   }
-// });
+// 前端拉数据库中的数据进行展示
+app.get('/fetch-data', async (req, res) => {
+  try {
+    if (!PointCollectionModel) {
+      return res.status(500).json({ error: 'PointCollectionModel not available.' });
+    }
+    const featureCollection = await PointCollectionModel.find();
+    res.json(featureCollection);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    res.status(500).json({ error: 'An error occurred.' });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

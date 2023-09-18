@@ -26,21 +26,23 @@ export default defineComponent({
         const fileList = ref([]);
         const uploading = ref(false);
         const jsonData = ref();
-        const handleRemove = file => {
+        const fieldName = ref(null); // 用于存储fieldName
+        
+        const handleRemove = (file) => {
             const index = fileList.value.indexOf(file);
             const newFileList = fileList.value.slice();
             newFileList.splice(index, 1);
             fileList.value = newFileList;
         };
-        const beforeUpload = file => {
+
+        const beforeUpload = (file) => {
             fileList.value = [...fileList.value, file];
+            fieldName.value = file.name; // 存储文件名
             const reader = new FileReader();
             reader.onload = function (event) {
                 const fileContent = event.target.result;  // 文件内容在这里
                 try {
                     jsonData.value = JSON.parse(fileContent);
-                    // 在这里可以对JSON数据进行处理  
-                    // console.log(jsonData.value);
                 } catch (error) {
                     // 处理解析JSON时的错误  
                     console.error("无法解析JSON文件:", error);
@@ -49,20 +51,22 @@ export default defineComponent({
             reader.readAsText(file);
             return false;
         };
+
         const submitData = () => {
             emit("getJson",jsonData.value);
-        }
+        };
+
         const handleUpload = async () => {
             const formData = new FormData();
-            const fieldName = 'geojsonfile';
-            // formData.append(fieldName, file);
+            // const fieldName = 'geojsonfile';
+            const currentFieldName = fieldName.value; // 获取当前的fieldName
             fileList.value.forEach(file => {
-                formData.append(fieldName, file);
+                formData.append(currentFieldName, file);
             });
             uploading.value = true;
             // AJAX 
             try {
-                await axios.post(`http://127.0.0.1:3000/upload/${fieldName}`, formData);
+                await axios.post(`http://127.0.0.1:3000/upload/${currentFieldName}`, formData);
                 fileList.value = [];
                 uploading.value = false;
                 // emit("getJson",jsonData.value);
